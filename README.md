@@ -1,6 +1,6 @@
 # Kawarimi
 
-Kawarimi replaces AI-generated code directly in the active VS Code file.
+Kawarimi bridges browser-based AI chatbots and VS Code, letting you apply generated code directly to the active file through a simple Find → Replace workflow—without API keys or manual copy-paste.
 
 ## Installation
 
