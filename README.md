@@ -2,6 +2,9 @@
 
 Kawarimi bridges browser-based AI chatbots and VS Code, letting you apply generated code directly to the active file through a simple Find → Replace workflow—without API keys or manual copy-paste.
 
+[![Download Chrome Extension](https://img.shields.io/badge/Download-Chrome_Extension-4285F4?logo=googlechrome&logoColor=white)](https://github.com/pixelizing/kawarimi/releases/download/v1.2.0/kawarimi-chrome-1.2.0.zip)
+[![Download VS Code Extension](https://img.shields.io/badge/Download-VS_Code_Extension-007ACC?logo=visualstudiocode&logoColor=white)](https://github.com/pixelizing/kawarimi/releases/download/v1.2.0/kawarimi-1.2.0.vsix)
+
 ## Installation
 
 ### Chrome
