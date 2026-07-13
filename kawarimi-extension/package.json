@@ -1,0 +1,48 @@
+{
+  "name": "kawarimi",
+  "displayName": "Kawarimi",
+  "description": "Replace AI-generated code directly in the active VS Code file.",
+  "version": "1.2.0",
+  "publisher": "pixelizing",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pixelizing/kawarimi.git"
+  },
+  "homepage": "https://github.com/pixelizing/kawarimi#readme",
+  "bugs": {
+    "url": "https://github.com/pixelizing/kawarimi/issues"
+  },
+  "keywords": [
+    "ai",
+    "code",
+    "replace",
+    "automation",
+    "chatgpt",
+    "claude",
+    "gemini"
+  ],
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Kawarimi",
+      "properties": {
+        "kawarimi.serverPort": {
+          "type": "number",
+          "default": 10240,
+          "description": "Port number for the Kawarimi local server."
+        }
+      }
+    }
+  }
+}
