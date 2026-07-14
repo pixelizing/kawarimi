@@ -1,16 +1,8 @@
 (async () => {
 const DISABLED_BUILT_IN_KEY = 'kawarimiDisabledBuiltInOrigins';
 
-try {
-    const storedState = await chrome.storage.sync.get([DISABLED_BUILT_IN_KEY]);
-    const disabledOrigins = Array.isArray(storedState[DISABLED_BUILT_IN_KEY])
-        ? storedState[DISABLED_BUILT_IN_KEY]
-        : [];
-
-    if (disabledOrigins.includes(location.origin)) return;
-} catch {
-    // Keep the built-in default when storage is temporarily unavailable.
-}
+if (document.documentElement.dataset.kawarimiBooting === 'true') return;
+document.documentElement.dataset.kawarimiBooting = 'true';
 
 let findPayload = null;
 let lockedButtonRef = null;
@@ -23,7 +15,7 @@ const IS_CLAUDE = location.hostname === 'claude.ai';
 const IS_PERPLEXITY = location.hostname === 'www.perplexity.ai' || location.hostname === 'perplexity.ai';
 const IS_GROK = location.hostname === 'grok.com' || location.hostname.endsWith('.grok.com');
 const NEEDS_OVERLAP_RECONCILE = IS_PERPLEXITY || IS_GROK;
-const TOOLBAR_RIGHT_OFFSET = IS_CLAUDE ? 112 : 50;
+const TOOLBAR_RIGHT_OFFSET = IS_CLAUDE ? 24 : 30;
 const HOST_Z_INDEX = '2147483000';
 const RUNTIME_ID = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 let nextBlockId = 1;
@@ -58,9 +50,21 @@ function createStyleLink() {
     return link;
 }
 
-function appendStylesheet(shadowRoot) {
+function appendStylesheet(shadowRoot, onReady = null) {
     const link = createStyleLink();
-    if (link) shadowRoot.appendChild(link);
+
+    if (!link) {
+        if (onReady) onReady();
+        return null;
+    }
+
+    if (onReady) {
+        link.addEventListener('load', onReady, { once: true });
+        link.addEventListener('error', onReady, { once: true });
+    }
+
+    shadowRoot.appendChild(link);
+    return link;
 }
 
 function applyStyles(element, styles) {
@@ -114,6 +118,9 @@ function removeLegacyUi() {
         preElement.classList.remove('kawarimi-injected');
         delete preElement.dataset.kawarimiInjected;
         delete preElement.dataset.kawarimiBlockId;
+        delete preElement.dataset.kawarimiSuppressed;
+        delete preElement.dataset.kawarimiCompleted;
+        delete preElement.dataset.kawarimiChatGptDuplicate;
 
         preElement.querySelectorAll('*').forEach((element) => {
             if (isKawarimiShadowHost(element)) element.remove();
@@ -179,23 +186,107 @@ function removeToolbarForPre(preElement) {
     preElement.dataset.kawarimiSuppressed = 'true';
 }
 
+function getPreCode(preElement) {
+    return (
+        preElement.querySelector('code')?.innerText ||
+        preElement.innerText ||
+        ''
+    ).trim();
+}
+
+function compareChatGptPreCandidates(first, second) {
+    const firstVisible = isRenderedPre(first) ? 1 : 0;
+    const secondVisible = isRenderedPre(second) ? 1 : 0;
+    if (firstVisible !== secondVisible) return secondVisible - firstVisible;
+
+    const firstHasCode = first.querySelector('code') ? 1 : 0;
+    const secondHasCode = second.querySelector('code') ? 1 : 0;
+    if (firstHasCode !== secondHasCode) return secondHasCode - firstHasCode;
+
+    const a = first.getBoundingClientRect();
+    const b = second.getBoundingClientRect();
+    return (b.width * b.height) - (a.width * a.height);
+}
+
 function chooseChatGptCanonicalPre(preElements) {
     const leafPres = preElements.filter((preElement) => !preElement.querySelector('pre'));
     if (!leafPres.length) return null;
 
-    return [...leafPres].sort((first, second) => {
-        const firstVisible = isRenderedPre(first) ? 1 : 0;
-        const secondVisible = isRenderedPre(second) ? 1 : 0;
-        if (firstVisible !== secondVisible) return secondVisible - firstVisible;
+    return [...leafPres].sort(compareChatGptPreCandidates)[0];
+}
 
-        const firstHasCode = first.querySelector('code') ? 1 : 0;
-        const secondHasCode = second.querySelector('code') ? 1 : 0;
-        if (firstHasCode !== secondHasCode) return secondHasCode - firstHasCode;
+function isSameChatGptVisualBlock(first, second) {
+    const firstCode = getPreCode(first);
+    const secondCode = getPreCode(second);
 
-        const a = first.getBoundingClientRect();
-        const b = second.getBoundingClientRect();
-        return (b.width * b.height) - (a.width * a.height);
-    })[0];
+    if (!firstCode || !secondCode) return false;
+
+    const sameOrStreamingCode =
+        firstCode === secondCode ||
+        firstCode.startsWith(secondCode) ||
+        secondCode.startsWith(firstCode);
+
+    if (!sameOrStreamingCode) return false;
+
+    const a = first.getBoundingClientRect();
+    const b = second.getBoundingClientRect();
+
+    const horizontallyAligned =
+        Math.abs(a.left - b.left) <= 16 &&
+        Math.abs(a.right - b.right) <= 16;
+
+    if (!horizontallyAligned) return false;
+
+    const overlapHeight = Math.max(
+        0,
+        Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
+    );
+
+    const smallerHeight = Math.min(a.height, b.height);
+    const overlapRatio = smallerHeight > 0
+        ? overlapHeight / smallerHeight
+        : 0;
+
+    return (
+        overlapRatio >= 0.5 ||
+        Math.abs(a.top - b.top) <= 40
+    );
+}
+
+function releaseChatGptSuppressedBlocks() {
+    const activePres = Array.from(
+        document.querySelectorAll('pre[data-kawarimi-block-id]')
+    ).filter((preElement) => {
+        const host = findToolbarForBlock(
+            preElement.dataset.kawarimiBlockId || ''
+        );
+
+        return (
+            host?.isConnected &&
+            preElement.dataset.kawarimiSuppressed !== 'true'
+        );
+    });
+
+    document.querySelectorAll(
+        'pre[data-kawarimi-chat-gpt-duplicate="true"]'
+    ).forEach((preElement) => {
+        if (!isRenderedPre(preElement)) return;
+
+        const stillDuplicated = activePres.some((activePre) => {
+            return isSameChatGptVisualBlock(
+                preElement,
+                activePre
+            );
+        });
+
+        if (stillDuplicated) return;
+
+        delete preElement.dataset.kawarimiChatGptDuplicate;
+        delete preElement.dataset.kawarimiSuppressed;
+        delete preElement.dataset.kawarimiInjected;
+        delete preElement.dataset.kawarimiBlockId;
+        preElement.classList.remove('kawarimi-injected');
+    });
 }
 
 function reconcileChatGptCodeBlocks() {
@@ -205,12 +296,20 @@ function reconcileChatGptCodeBlocks() {
     isChatGptReconciling = true;
 
     try {
+        removeOrphanedToolbarHosts();
+        releaseChatGptSuppressedBlocks();
+
         const allPres = Array.from(document.querySelectorAll('pre'));
         const groups = new Map();
+        const canonicalPres = [];
 
         for (const preElement of allPres) {
             const owner = getOutermostPre(preElement);
-            if (!groups.has(owner)) groups.set(owner, []);
+
+            if (!groups.has(owner)) {
+                groups.set(owner, []);
+            }
+
             groups.get(owner).push(preElement);
         }
 
@@ -219,13 +318,53 @@ function reconcileChatGptCodeBlocks() {
 
             for (const preElement of preElements) {
                 if (preElement === canonical) {
-                    delete preElement.dataset.kawarimiSuppressed;
-                    injectKawarimiButtons(preElement);
+                    canonicalPres.push(preElement);
                 } else {
                     removeToolbarForPre(preElement);
                 }
             }
         }
+
+        const keptPres = [];
+
+        for (
+            const preElement of canonicalPres.sort(
+                compareChatGptPreCandidates
+            )
+        ) {
+            if (!isRenderedPre(preElement)) {
+                removeToolbarForPre(preElement);
+                continue;
+            }
+
+            const duplicate = keptPres.some((existingPre) => {
+                return isSameChatGptVisualBlock(
+                    preElement,
+                    existingPre
+                );
+            });
+
+            if (duplicate) {
+                preElement.dataset.kawarimiChatGptDuplicate = 'true';
+                removeToolbarForPre(preElement);
+                continue;
+            }
+
+            delete preElement.dataset.kawarimiChatGptDuplicate;
+            delete preElement.dataset.kawarimiSuppressed;
+            injectKawarimiButtons(preElement);
+            keptPres.push(preElement);
+        }
+
+        requestAnimationFrame(() => {
+            removeOrphanedToolbarHosts();
+            removeOverlappingChatGptToolbarHosts();
+        });
+
+        setTimeout(() => {
+            removeOrphanedToolbarHosts();
+            removeOverlappingChatGptToolbarHosts();
+        }, 80);
     } finally {
         isChatGptReconciling = false;
     }
@@ -329,6 +468,49 @@ function removeOverlappingToolbarHosts() {
     }
 }
 
+function removeOverlappingChatGptToolbarHosts() {
+    if (!IS_CHATGPT || isDestroyed) return;
+    if (document.documentElement.dataset.kawarimiRuntime !== RUNTIME_ID) return;
+
+    const hosts = Array.from(
+        document.querySelectorAll(
+            `[data-kawarimi-host][data-kawarimi-runtime="${RUNTIME_ID}"]`
+        )
+    ).sort((first, second) => {
+        return (
+            Number(second.dataset.kawarimiSequence || 0) -
+            Number(first.dataset.kawarimiSequence || 0)
+        );
+    });
+
+    const keptOwners = [];
+
+    for (const host of hosts) {
+        const owner = findPreForBlock(
+            host.dataset.kawarimiFor || ''
+        );
+
+        if (!owner || !isRenderedPre(owner)) {
+            host.remove();
+            continue;
+        }
+
+        const duplicate = keptOwners.some((existingOwner) => {
+            return isSameChatGptVisualBlock(
+                owner,
+                existingOwner
+            );
+        });
+
+        if (duplicate) {
+            owner.dataset.kawarimiChatGptDuplicate = 'true';
+            removeToolbarForPre(owner);
+        } else {
+            keptOwners.push(owner);
+        }
+    }
+}
+
 function reconcilePerplexityCodeBlocks() {
     if (!NEEDS_OVERLAP_RECONCILE || isDestroyed) return;
     if (document.documentElement.dataset.kawarimiRuntime !== RUNTIME_ID) return;
@@ -403,6 +585,25 @@ function showToast(message, isError = false) {
 
 
 
+function sendRuntimeMessage(message, timeoutMs = 10000) {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error('VS Code did not respond in time.'));
+        }, timeoutMs);
+
+        chrome.runtime.sendMessage(message).then(
+            (result) => {
+                clearTimeout(timeout);
+                resolve(result);
+            },
+            (error) => {
+                clearTimeout(timeout);
+                reject(error);
+            }
+        );
+    });
+}
+
 function injectKawarimiButtons(preElement) {
     if (isDestroyed) return;
     if (!(preElement instanceof HTMLElement)) return;
@@ -450,13 +651,22 @@ function injectKawarimiButtons(preElement) {
 
     anchor.appendChild(host);
 
-            const shadow = host.attachShadow({ mode: 'open' });
-    appendStylesheet(shadow);
-
-    let replaceAll = true;
-
     const root = document.createElement('div');
     root.className = 'kawarimi-root';
+    root.style.visibility = 'hidden';
+
+    if (IS_CHATGPT) {
+        root.style.transform = 'translateY(-4px)';
+    }
+
+    const revealToolbar = () => {
+        root.style.removeProperty('visibility');
+    };
+
+    const shadow = host.attachShadow({ mode: 'open' });
+    appendStylesheet(shadow, revealToolbar);
+
+    let replaceAll = true;
 
     const container = document.createElement('div');
     container.className = 'kawarimi-btn-container';
@@ -522,7 +732,7 @@ function injectKawarimiButtons(preElement) {
         const replacePayload = getCode();
         btnReplace.textContent = 'Injecting...';
 
-                chrome.runtime.sendMessage({
+                sendRuntimeMessage({
             type: 'kawarimi:patch',
             port: currentPort,
             payload: {
@@ -680,7 +890,8 @@ function teardownKawarimi() {
             delete preElement.dataset.kawarimiBlockId;
             delete preElement.dataset.kawarimiInjected;
                         delete preElement.dataset.kawarimiSuppressed;
-            delete preElement.dataset.kawarimiCompleted;
+                        delete preElement.dataset.kawarimiCompleted;
+            delete preElement.dataset.kawarimiChatGptDuplicate;
             preElement.classList.remove('kawarimi-injected');
         }
     });
@@ -688,6 +899,8 @@ function teardownKawarimi() {
     if (document.documentElement.dataset.kawarimiRuntime === RUNTIME_ID) {
         delete document.documentElement.dataset.kawarimiRuntime;
     }
+
+    delete document.documentElement.dataset.kawarimiBooting;
 }
 
 try {
@@ -709,6 +922,19 @@ if (IS_CHATGPT) {
     setTimeout(schedulePerplexityReconcile, 900);
 } else {
     scanForCodeBlocks(document);
+}
+
+try {
+    const storedState = await chrome.storage.sync.get([DISABLED_BUILT_IN_KEY]);
+    const disabledOrigins = Array.isArray(storedState[DISABLED_BUILT_IN_KEY])
+        ? storedState[DISABLED_BUILT_IN_KEY]
+        : [];
+
+    if (disabledOrigins.includes(location.origin)) {
+        teardownKawarimi();
+    }
+} catch {
+    // Keep the built-in default when storage is temporarily unavailable.
 }
 
 })();
