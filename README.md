@@ -6,6 +6,10 @@ Kawarimi bridges browser-based AI chatbots and VS Code, letting you apply genera
 [![Install from VS Code Marketplace](https://img.shields.io/badge/Install-VS_Code_Marketplace-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=pixelizing.kawarimi)
 [![Download VSIX](https://img.shields.io/badge/Download-VSIX-555555?logo=visualstudiocode&logoColor=white)](https://github.com/pixelizing/kawarimi/releases/download/v1.2.0/kawarimi-1.2.0.vsix)
 
+## Demo
+
+https://github.com/user-attachments/assets/d3c94c78-ec4b-4829-8521-ca5819ba4094
+
 ## Installation
 
 ### Chrome
