@@ -1,7 +1,7 @@
 {
   "name": "kawarimi",
   "displayName": "Kawarimi",
-  "description": "Replace AI-generated code directly in the active VS Code file.",
+  "description": "VS Code companion for Kawarimi's browser-based AI Find → Replace workflow.",
   "version": "1.2.0",
   "publisher": "pixelizing",
   "license": "MIT",
