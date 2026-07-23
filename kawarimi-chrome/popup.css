@@ -211,6 +211,10 @@ button {
   font-weight: 620;
 }
 
+.match-row {
+  margin-top: -7px;
+}
+
 .theme-options {
   display: inline-flex;
   gap: 2px;

@@ -13,7 +13,7 @@ Kawarimi is the VS Code companion for a browser-to-editor workflow that applies 
 
 Kawarimi updates and automatically saves the active VS Code file.
 
-Choose **Flex** or **Exact** before clicking **Find**; the selected mode is locked to the target code.
+Choose **Flex** or **Exact** from the Kawarimi Chrome popup before clicking **Find**. The selected mode is remembered and locked to the target code.
 
 - **Flex** — ignores whitespace differences; best for ordinary code edits
 - **Exact** — preserves spaces, tabs, indentation, and blank-line count

@@ -1,6 +1,7 @@
 const CUSTOM_SITE_KEY = 'kawarimiCustomSites';
 const DISABLED_BUILT_IN_KEY = 'kawarimiDisabledBuiltInOrigins';
 const THEME_KEY = 'kawarimiTheme';
+const MATCH_MODE_KEY = 'kawarimiMatchMode';
 
 const BUILT_IN_SITES = [
     { name: 'ChatGPT', match: (host) => host === 'chatgpt.com' },
@@ -25,10 +26,11 @@ const elements = {
     statusToast: document.getElementById('statusToast'),
     statusText: document.getElementById('statusText'),
     modal: document.getElementById('permissionModal'),
-    cancelPermission: document.getElementById('cancelPermission'),
+        cancelPermission: document.getElementById('cancelPermission'),
         continuePermission: document.getElementById('continuePermission'),
     settingsButton: document.getElementById('settingsButton'),
-    themeButtons: [...document.querySelectorAll('[data-theme-value]')]
+    themeButtons: [...document.querySelectorAll('[data-theme-value]')],
+    matchModeButtons: [...document.querySelectorAll('[data-match-mode]')]
 };
 
 let currentTab = null;
@@ -39,6 +41,7 @@ let currentBuiltIn = null;
 let isBusy = false;
 let statusTimer = 0;
 let themeMode = 'auto';
+let matchMode = 'flexible';
 
 const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -62,6 +65,22 @@ function applyTheme(mode) {
 async function loadTheme() {
     const data = await chrome.storage.sync.get([THEME_KEY]);
     applyTheme(data[THEME_KEY] || 'auto');
+}
+
+function applyMatchMode(mode) {
+    matchMode = mode === 'exact' ? 'exact' : 'flexible';
+
+    elements.matchModeButtons.forEach((button) => {
+        const active = button.dataset.matchMode === matchMode;
+
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+}
+
+async function loadMatchMode() {
+    const data = await chrome.storage.sync.get([MATCH_MODE_KEY]);
+    applyMatchMode(data[MATCH_MODE_KEY]);
 }
 
 systemTheme.addEventListener('change', () => {
@@ -345,6 +364,18 @@ elements.themeButtons.forEach((button) => {
     });
 });
 
+elements.matchModeButtons.forEach((button) => {
+    button.addEventListener('click', async () => {
+        const selectedMode = button.dataset.matchMode;
+
+        applyMatchMode(selectedMode);
+
+        await chrome.storage.sync.set({
+            [MATCH_MODE_KEY]: selectedMode
+        });
+    });
+});
+
 elements.settingsButton.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
 });
@@ -353,7 +384,7 @@ elements.settingsButton.addEventListener('click', () => {
     elements.version.textContent = `v${chrome.runtime.getManifest().version}`;
 
     try {
-        await loadTheme();
+                await Promise.all([loadTheme(), loadMatchMode()]);
         await renderCurrentSite();
         } catch (error) {
         showStatus(error.message || 'Could not read the current site.', 'error');

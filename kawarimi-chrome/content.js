@@ -1,10 +1,12 @@
 (async () => {
 const DISABLED_BUILT_IN_KEY = 'kawarimiDisabledBuiltInOrigins';
+const MATCH_MODE_KEY = 'kawarimiMatchMode';
 
 if (document.documentElement.dataset.kawarimiBooting === 'true') return;
 document.documentElement.dataset.kawarimiBooting = 'true';
 
 let findPayload = null;
+let currentMatchMode = 'flexible';
 let findMatchMode = 'flexible';
 let lockedButtonRef = null;
 let completedButtonRef = null;
@@ -35,8 +37,13 @@ try {
 }
 
 try {
-    chrome.storage.sync.get(['kawarimiPort'], (data) => {
-        if (data?.kawarimiPort) currentPort = data.kawarimiPort;
+    const data = await chrome.storage.sync.get(['kawarimiPort', MATCH_MODE_KEY]);
+    if (data?.kawarimiPort) currentPort = data.kawarimiPort;
+    currentMatchMode = data?.[MATCH_MODE_KEY] === 'exact' ? 'exact' : 'flexible';
+
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'sync' || !changes[MATCH_MODE_KEY]) return;
+        currentMatchMode = changes[MATCH_MODE_KEY].newValue === 'exact' ? 'exact' : 'flexible';
     });
 } catch {
     // Keep the default port when Chrome has invalidated an older context.
@@ -668,23 +675,9 @@ function injectKawarimiButtons(preElement) {
     appendStylesheet(shadow, revealToolbar);
 
     let replaceAll = true;
-    let matchMode = 'flexible';
 
     const container = document.createElement('div');
     container.className = 'kawarimi-btn-container';
-
-    const btnMode = document.createElement('button');
-    btnMode.className = 'kawarimi-btn kawarimi-toggle';
-    btnMode.textContent = 'Flex';
-    btnMode.title = 'Flexible match: ignore whitespace differences';
-
-    btnMode.addEventListener('click', () => {
-        matchMode = matchMode === 'flexible' ? 'exact' : 'flexible';
-        btnMode.textContent = matchMode === 'exact' ? 'Exact' : 'Flex';
-        btnMode.title = matchMode === 'exact'
-            ? 'Exact match: preserve spaces, tabs, and blank lines'
-            : 'Flexible match: ignore whitespace differences';
-    });
 
     const btnToggle = document.createElement('button');
     btnToggle.className = 'kawarimi-btn kawarimi-toggle active';
@@ -732,11 +725,11 @@ function injectKawarimiButtons(preElement) {
         }
 
         findPayload = getCode();
-        findMatchMode = matchMode;
+        findMatchMode = currentMatchMode;
         btnFind.textContent = 'Locked';
         btnFind.classList.add('locked');
         lockedButtonRef = btnFind;
-        showToast('Target locked. Select a replacement.');
+        showToast(`Target locked · ${findMatchMode === 'exact' ? 'Exact' : 'Flex'}.`);
     });
 
     btnReplace.addEventListener('click', () => {
@@ -820,7 +813,7 @@ function injectKawarimiButtons(preElement) {
         }
     });
 
-    container.append(btnMode, btnToggle, btnFind, btnReplace);
+    container.append(btnToggle, btnFind, btnReplace);
     root.appendChild(container);
     shadow.appendChild(root);
 
