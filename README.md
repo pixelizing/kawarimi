@@ -8,7 +8,7 @@ Kawarimi bridges browser-based AI chatbots and VS Code, letting you apply genera
 
 ## Demo
 
-https://github.com/user-attachments/assets/d3c94c78-ec4b-4829-8521-ca5819ba4094
+[https://github.com/user-attachments/assets/d3c94c78-ec4b-4829-8521-ca5819ba4094](https://github.com/user-attachments/assets/e045daf9-a698-4f84-939f-f751679b62b2)
 
 ## Installation
 
