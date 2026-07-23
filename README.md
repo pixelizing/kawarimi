@@ -2,9 +2,9 @@
 
 Kawarimi bridges browser-based AI chatbots and VS Code, letting you apply generated code directly to the active file through a simple Find → Replace workflow—without API keys or manual copy-paste.
 
-[![Download Chrome Extension](https://img.shields.io/badge/Download-Chrome_Extension-4285F4?logo=googlechrome&logoColor=white)](https://github.com/pixelizing/kawarimi/releases/download/v1.2.0/kawarimi-chrome-1.2.0.zip)
+[![Download Chrome Extension](https://img.shields.io/badge/Download-Chrome_Extension-4285F4?logo=googlechrome&logoColor=white)](https://github.com/pixelizing/kawarimi/releases/download/v1.3.0/kawarimi-chrome-1.3.0.zip)
 [![Install from VS Code Marketplace](https://img.shields.io/badge/Install-VS_Code_Marketplace-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=pixelizing.kawarimi)
-[![Download VSIX](https://img.shields.io/badge/Download-VSIX-555555?logo=visualstudiocode&logoColor=white)](https://github.com/pixelizing/kawarimi/releases/download/v1.2.0/kawarimi-1.2.0.vsix)
+[![Download VSIX](https://img.shields.io/badge/Download-VSIX-555555?logo=visualstudiocode&logoColor=white)](https://github.com/pixelizing/kawarimi/releases/download/v1.3.0/kawarimi-1.3.0.vsix)
 
 ## Demo
 
@@ -14,7 +14,7 @@ Kawarimi bridges browser-based AI chatbots and VS Code, letting you apply genera
 
 ### Chrome
 
-1. Download `kawarimi-chrome-1.2.0.zip`
+1. Download `kawarimi-chrome-1.3.0.zip`
 2. Extract the ZIP
 3. Open `chrome://extensions`
 4. Enable **Developer mode**
@@ -23,7 +23,7 @@ Kawarimi bridges browser-based AI chatbots and VS Code, letting you apply genera
 
 ### VS Code
 
-1. Download `kawarimi-1.2.0.vsix`
+1. Download `kawarimi-1.3.0.vsix`
 2. Open the Extensions view in VS Code
 3. Open the `...` menu
 4. Select **Install from VSIX...**
