@@ -90,8 +90,12 @@ function activate(context) {
             req.on('end', async () => {
                 try {
                     const payload = JSON.parse(body);
-                    const findTextRaw = payload.find.trim();
-                    const findText = findTextRaw.replace(ZERO_WIDTH_RE, '');
+                    const matchMode = payload.matchMode === 'exact' ? 'exact' : 'flexible';
+                    const findTextRaw = typeof payload.find === 'string' ? payload.find : '';
+                    const normalizedFindText = matchMode === 'exact'
+                        ? findTextRaw.replace(/^(?:\r\n|\r|\n)+|(?:\r\n|\r|\n)+$/g, '')
+                        : findTextRaw.trim();
+                    const findText = normalizedFindText.replace(ZERO_WIDTH_RE, '');
                     const replaceText = (payload.replace || '').replace(ZERO_WIDTH_RE, '');
                                         // Replace all matches unless the client requests only the first.
                     const replaceAll = payload.replaceAll !== false;
@@ -109,9 +113,10 @@ function activate(context) {
                     const { clean: cleanDocText, map } = buildCleanMap(documentText);
 
                     const escapedFind = escapeRegExp(findText);
-                                        // Allow harmless whitespace differences between copied and local code.
-                    const flexibleRegexStr = escapedFind.replace(/\s+/g, '\\s+');
-                    const regex = new RegExp(flexibleRegexStr, 'g');
+                    const matchRegexStr = matchMode === 'exact'
+                        ? escapedFind.replace(/\r\n|\r|\n/g, '\\r?\\n')
+                        : escapedFind.replace(/\s+/g, '\\s+');
+                    const regex = new RegExp(matchRegexStr, 'g');
 
                     const matches = [];
                     let m;

@@ -5,6 +5,7 @@ if (document.documentElement.dataset.kawarimiBooting === 'true') return;
 document.documentElement.dataset.kawarimiBooting = 'true';
 
 let findPayload = null;
+let findMatchMode = 'flexible';
 let lockedButtonRef = null;
 let completedButtonRef = null;
 let completedCodeSnapshot = null;
@@ -667,9 +668,23 @@ function injectKawarimiButtons(preElement) {
     appendStylesheet(shadow, revealToolbar);
 
     let replaceAll = true;
+    let matchMode = 'flexible';
 
     const container = document.createElement('div');
     container.className = 'kawarimi-btn-container';
+
+    const btnMode = document.createElement('button');
+    btnMode.className = 'kawarimi-btn kawarimi-toggle';
+    btnMode.textContent = 'Flex';
+    btnMode.title = 'Flexible match: ignore whitespace differences';
+
+    btnMode.addEventListener('click', () => {
+        matchMode = matchMode === 'flexible' ? 'exact' : 'flexible';
+        btnMode.textContent = matchMode === 'exact' ? 'Exact' : 'Flex';
+        btnMode.title = matchMode === 'exact'
+            ? 'Exact match: preserve spaces, tabs, and blank lines'
+            : 'Flexible match: ignore whitespace differences';
+    });
 
     const btnToggle = document.createElement('button');
     btnToggle.className = 'kawarimi-btn kawarimi-toggle active';
@@ -691,9 +706,9 @@ function injectKawarimiButtons(preElement) {
     btnReplace.className = 'kawarimi-btn';
     btnReplace.textContent = 'Replace';
 
-        const getCode = () => {
+    const getCode = () => {
         const codeElement = preElement.querySelector('code');
-        return codeElement ? codeElement.innerText : preElement.innerText;
+        return codeElement ? codeElement.textContent : preElement.innerText;
     };
 
     if (
@@ -717,6 +732,7 @@ function injectKawarimiButtons(preElement) {
         }
 
         findPayload = getCode();
+        findMatchMode = matchMode;
         btnFind.textContent = 'Locked';
         btnFind.classList.add('locked');
         lockedButtonRef = btnFind;
@@ -732,13 +748,14 @@ function injectKawarimiButtons(preElement) {
         const replacePayload = getCode();
         btnReplace.textContent = 'Injecting...';
 
-                sendRuntimeMessage({
+        sendRuntimeMessage({
             type: 'kawarimi:patch',
             port: currentPort,
             payload: {
                 find: findPayload,
                 replace: replacePayload,
-                replaceAll
+                replaceAll,
+                matchMode: findMatchMode
             }
         })
             .then((result) => {
@@ -803,7 +820,7 @@ function injectKawarimiButtons(preElement) {
         }
     });
 
-    container.append(btnToggle, btnFind, btnReplace);
+    container.append(btnMode, btnToggle, btnFind, btnReplace);
     root.appendChild(container);
     shadow.appendChild(root);
 

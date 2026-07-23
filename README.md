@@ -39,6 +39,10 @@ https://github.com/user-attachments/assets/d3c94c78-ec4b-4829-8521-ca5819ba4094
 
 Kawarimi updates and automatically saves the active VS Code file.
 
+Choose **Flex** or **Exact** before clicking **Find**; the selected mode is locked to the target code.
+
+- **Flex** — ignores whitespace differences; best for ordinary code edits
+- **Exact** — preserves spaces, tabs, indentation, and blank-line count
 - **All** — replaces every match
 - **1st** — replaces only the first match
 - **Done** — marks the latest successful replacement

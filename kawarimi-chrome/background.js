@@ -72,7 +72,8 @@ async function sendPatchToVsCode(port, payload) {
         body: JSON.stringify({
             find,
             replace,
-            replaceAll: payload?.replaceAll !== false
+            replaceAll: payload?.replaceAll !== false,
+            matchMode: payload?.matchMode === 'exact' ? 'exact' : 'flexible'
         })
     });
 
