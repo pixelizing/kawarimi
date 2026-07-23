@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0
+
+- Added Flex and Exact matching modes
+- Added whitespace-sensitive matching for spaces, tabs, indentation, and blank lines
+- Preserved LF and CRLF compatibility in Exact mode
+- Kept Flex as the default for backward compatibility
+
 ## 1.2.0
 
 - Added direct AI code replacement in the active VS Code file
